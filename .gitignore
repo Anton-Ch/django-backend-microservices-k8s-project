@@ -1,0 +1,63 @@
+# OS
+
+.DS_Store  
+Thumbs.db
+
+# Python
+
+**pycache**/  
+*.py[cod]  
+*.pyo  
+*.pyd  
+*.so  
+*.egg  
+*.egg-info/  
+.eggs/  
+build/  
+dist/  
+pip-wheel-metadata/  
+*.log
+
+# Virtualenv / tools
+
+.venv/  
+venv/  
+ENV/  
+.pyenv/  
+.pip-cache/  
+.poetry/  
+.cache/  
+.mypy_cache/  
+.pytest_cache/  
+.coverage  
+htmlcov/
+
+# IDE
+
+.vscode/  
+.idea/  
+*.iml
+
+# Env & local configs
+
+.env  
+.env.*  
+*.local
+
+# Django / Flask artifacts
+
+instance/  
+media/  
+staticfiles/  
+*.sqlite3
+
+# Node (if ever used for tooling)
+
+node_modules/  
+npm-debug.log*  
+yarn-debug.log*  
+yarn-error.log*
+
+# Docker
+
+*.pid
