@@ -8,53 +8,114 @@ Local Dev
 ```bash
 pip install -r requirements.txt
 pytest -q
-FLASK_APP=app/main.py flask run -p 8001
-# http://localhost:8001/health 
+FLASK_APP=app/main.py flask run -p 5000
+# http://localhost:5000/health 
 ```
 
 ---
 
-## RESTful API Endpoints (planned schema)
+## RESTful API Endpoints
 
-| Action | Method | Return code | Body                        | URL Endpoint     |
-|--------|--------|-------------|-----------------------------|------------------|
-| List   | GET    | 200 OK      | Array of picture URLs `[{...}]` | `GET /picture`     |
-| Create | POST   | 201 CREATED | A picture resource as JSON `{...}` | `POST /picture`    |
-| Read   | GET    | 200 OK      | A picture as JSON `{...}`   | `GET /picture/{id}` |
-| Update | PUT    | 200 OK      | A picture as JSON `{...}`   | `PUT /picture/{id}` |
-| Delete | DELETE | 204 NO CONTENT | `""`                      | `DELETE /picture/{id}` |
+| Action | Method | Return code | Body                          | URL Endpoint        |
+|--------|--------|-------------|-------------------------------|---------------------|
+| Health | GET    | 200 OK      | `{"status": "OK"}`            | `/health`           |
+| Count  | GET    | 200 OK      | `{"length": <int>}`           | `/count`            |
+| List   | GET    | 200 OK      | Array of pictures `[{...}]`   | `/picture`          |
+| Read   | GET    | 200 OK      | A picture as JSON `{...}`     | `/picture/<id>`     |
+| Create | POST   | 201 CREATED | Created picture as JSON `{...}` | `/picture`        |
+|        |        | 302 FOUND   | `{"Message": "... already present"}` | `/picture`  |
+| Update | PUT    | 200 OK      | Updated picture as JSON `{...}` | `/picture/<id>`   |
+|        |        | 404 NOT FOUND | `{"Message": "picture not"}` | `/picture/<id>`   |
+| Delete | DELETE | 204 NO CONTENT | `""`                       | `/picture/<id>`     |
+|        |        | 404 NOT FOUND | `{"Message": "picture not"}` | `/picture/<id>`     |
+
 
 ---
 
 
-## Existing Endpoints (already implemented)
+## Example Requests
 
-| Action | Method | Return code | Body | URL Endpoint |
-|--------|--------|-------------|------|--------------|
-| Health | GET    | 200 OK      | `""` | `GET /health` |
-| Count  | GET    | 200 OK      | `""` | `GET /count`  |
+### Health check
+```bash
+curl -s http://localhost:5000/health
+# {"status": "OK"}
+```
 
----
+### Count
+```bash
+curl -s http://localhost:5000/count
+# {"length": 10}
+```
+
+### List all pictures
+```bash
+curl -s http://localhost:5000/picture
+```
+
+### Get picture by ID
+```bash
+curl -s http://localhost:5000/picture/1
+```
+
+### Create picture
+
+```bash
+curl -X POST http://localhost:5000/picture \
+  -H "Content-Type: application/json" \
+  -d '{"id":200,"pic_url":"http://dummyimage.com/230x100.png/dddddd/000000","event_country":"United States","event_state":"California","event_city":"Fremont","event_date":"11/2/2030"}'
+```
+
+### Update picture
+```bash
+curl -X PUT http://localhost:5000/picture/200 \
+  -H "Content-Type: application/json" \
+  -d '{"id":200,"pic_url":"http://dummyimage.com/300x200.png/ff4444/ffffff","event_country":"United States","event_state":"California","event_city":"Fremont","event_date":"12/12/2031"}'
+```
+
+### Delete picture
+
+```bash
+curl -X DELETE http://localhost:5000/picture/200 -i
+```
 
 
-## Configuration (env)
+## Local Development
+```bash
+# From service folder
+cd services/pictures-flask
 
-- `EXTERNAL_PICTURES_API_BASE` — optional upstream API/base    
-- `PORT_PICTURES` — default 8001    
-- `ENV` — dev/prod
-  
+# Install dependencies (using pipenv)
+pipenv --python 3.9
+pipenv install -r requirements.txt
+pipenv install pytest
+
+# Run tests
+pipenv run pytest -q
+
+# Run service
+FLASK_APP=backend/routes.py pipenv run flask run -p 5000
+# Visit http://localhost:5000/health
+```
+
+
 ## Tests
 
-The previous developer wrote tests for the service. At the moment:
-- Only `/health` and `/count` tests pass.
-- Other tests fail until the CRUD endpoints are implemented.
+All endpoints are covered by unit tests.
 
-Run only passing tests:
+Run all tests:
 ```bash
-pytest -k 'test_health or test_count'
+pipenv run pytest -q
 ```
 
-Run all tests (expected failures for unimplemented endpoints):
-```bash
-pytest
-```
+Expected passing tests:
+- test_health
+- test_count
+- test_data_contains_10_pictures
+- test_get_picture
+- test_get_pictures_check_content_type_equals_json
+- test_get_picture_by_id
+- test_pictures_json_is_not_empty
+- test_post_picture
+- test_post_picture_duplicate
+- test_update_picture_by_id
+- test_delete_picture_by_id
