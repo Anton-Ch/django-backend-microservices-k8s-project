@@ -13,7 +13,8 @@ Flask microservice for songs and lyrics, backed by MongoDB.
 pip install -r requirements.txt
 pytest -q
 FLASK_APP=app/main.py flask run -p 8002
-# http://localhost:8002/health ```
+# http://localhost:8002/health 
+```
 
 ## Configuration (env)
 
