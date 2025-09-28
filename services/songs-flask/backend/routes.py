@@ -9,45 +9,110 @@ from pymongo.errors import OperationFailure
 from pymongo.results import InsertOneResult
 from bson.objectid import ObjectId
 import sys
-
-SITE_ROOT = os.path.realpath(os.path.dirname(__file__))
-json_url = os.path.join(SITE_ROOT, "data", "songs.json")
-songs_list: list = json.load(open(json_url))
-
-# client = MongoClient(
-#     f"mongodb://{app.config['MONGO_USERNAME']}:{app.config['MONGO_PASSWORD']}@localhost")
-mongodb_service = os.environ.get('MONGODB_SERVICE')
-mongodb_username = os.environ.get('MONGODB_USERNAME')
-mongodb_password = os.environ.get('MONGODB_PASSWORD')
-mongodb_port = os.environ.get('MONGODB_PORT')
-
-print(f'The value of MONGODB_SERVICE is: {mongodb_service}')
-
-if mongodb_service == None:
-    app.logger.error('Missing MongoDB server in the MONGODB_SERVICE variable')
-    # abort(500, 'Missing MongoDB server in the MONGODB_SERVICE variable')
-    sys.exit(1)
-
-if mongodb_username and mongodb_password:
-    url = f"mongodb://{mongodb_username}:{mongodb_password}@{mongodb_service}"
-else:
-    url = f"mongodb://{mongodb_service}"
+from urllib.parse import urlparse
 
 
-print(f"connecting to url: {url}")
+# Load .env from the service root (services/songs-flask/.env)
+# Use os.path on purpose (explicit and consistent across the codebase).
+try:
+    from dotenv import load_dotenv
+    SERVICE_ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+    load_dotenv(os.path.join(SERVICE_ROOT, ".env"))
+except Exception:
+    # If python-dotenv is not installed, the app can still read real env vars
+    pass
+
+
+# Build the MongoDB URI from MONGO_URI or (as a fallback) from component vars.
+def build_mongo_uri() -> str:
+    """
+    Resolve the final Mongo connection string:
+    1) If MONGO_URI is set in .env vars, use it as-is.
+    2) Otherwise build it from .env var components:
+       MONGO_APP_USERNAME, MONGO_APP_PASSWORD, MONGODB_HOST, MONGODB_PORT,
+       MONGO_DB, MONGO_AUTH_SOURCE.
+    """
+    uri = os.getenv("MONGO_URI")
+    if uri:
+        return uri
+
+    # fallback part
+    host = os.getenv("MONGODB_HOST", "localhost")
+    port = int(os.getenv("MONGODB_PORT", "27017"))
+    dbn = os.getenv("MONGO_DB", "app_db")
+
+    user = os.getenv("MONGO_APP_USERNAME")
+    pwd = os.getenv("MONGO_APP_PASSWORD")
+
+    # Default authSource: app_db (where the app user lives).
+    # If you intend to use root instead, set MONGO_AUTH_SOURCE=admin in .env.
+    auth_source = os.getenv("MONGO_AUTH_SOURCE", dbn)
+
+    if user and pwd:
+        return f"mongodb://{user}:{pwd}@{host}:{port}/{dbn}?authSource={auth_source}"
+    # Fallback without auth (useful for dev-only scenarios with disabled auth)
+    return f"mongodb://{host}:{port}/{dbn}"
+
+
+# Resolve the final Mongo URI and connect
+MONGO_URL = build_mongo_uri()
+app.logger.info(f"Connecting to Mongo: {MONGO_URL}")
 
 try:
-    client = MongoClient(url)
+    client = MongoClient(MONGO_URL)
 except OperationFailure as e:
-    app.logger.error(f"Authentication error: {str(e)}")
+    app.logger.error(f"Mongo authentication error: {str(e)}")
+    raise
 
-db = client.songs
-db.songs.drop()
-db.songs.insert_many(songs_list)
+# Pick DB name from URI path (or default to 'app_db')
+try:
+    parsed = urlparse(MONGO_URL)
+    DB_NAME = (parsed.path.lstrip("/") or "app_db").split("?")[0]
+except Exception:
+    DB_NAME = "app_db"
+
+
+db = client[DB_NAME]
+
+
+# Bootstrap data from JSON (lab-style): drop and seed the 'songs' collection.
+# NOTE: This is for the learning lab to ensure deterministic tests.
+SITE_ROOT = os.path.realpath(os.path.dirname(__file__))
+json_url = os.path.join(SITE_ROOT, "data", "songs.json")
+try:
+    with open(json_url, "r", encoding="utf-8") as fh:
+        songs_list = json.load(fh)
+    # For reproducible tests we reset the collection:
+    db.songs.drop()
+    if songs_list:
+        db.songs.insert_many(songs_list)
+except FileNotFoundError:
+    app.logger.warning("songs.json not found; skipping bootstrap seeding.")
 
 def parse_json(data):
+    """Serialize Mongo objects (ObjectId, datetime) into JSON-safe structures."""
     return json.loads(json_util.dumps(data))
 
 ######################################################################
-# INSERT CODE HERE
+# SYSTEM ENDPOINTS
 ######################################################################
+
+@app.route("/health", methods=["GET"])
+def health():
+    """Health check endpoint."""
+    return jsonify(status="OK"), 200
+
+@app.route("/count", methods=["GET"])
+def count():
+    """Return number of documents in the 'songs' collection."""
+    total = db.songs.count_documents({})
+    return jsonify(count=total), 200
+
+######################################################################
+# CRUD ENDPOINTS (placeholders for the next steps)
+######################################################################
+# def get_songs(): ...
+# def get_song_by_id(id): ...
+# def create_song(): ...
+# def update_song(id): ...
+# def delete_song(id): ...
