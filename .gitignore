@@ -40,8 +40,9 @@ htmlcov/
 
 # Env & local configs
 
-.env  
-.env.*  
+.env
+.env.dev
+.env.prod
 *.local
 
 # Django / Flask artifacts
