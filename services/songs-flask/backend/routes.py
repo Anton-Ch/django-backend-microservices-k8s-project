@@ -109,9 +109,16 @@ def count():
     return jsonify(count=total), 200
 
 ######################################################################
-# CRUD ENDPOINTS (placeholders for the next steps)
+# CRUD ENDPOINTS
 ######################################################################
-# def get_songs(): ...
+@app.route("/song", methods=["GET"])
+def songs():
+    songs = list(db.songs.find({}))
+    return {"songs": parse_json(songs)}, 200
+
+
+
+
 # def get_song_by_id(id): ...
 # def create_song(): ...
 # def update_song(id): ...
