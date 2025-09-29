@@ -125,7 +125,17 @@ def get_song_by_id(id):
     return jsonify({"Message": f"song with id {id} not found"}), 404
 
 
-# def get_song_by_id(id): ...
+@app.route("/song", methods=["POST"])
+def create_song():
+    song = request.json
+    print(type(song))
+    # check if such song with ID already exists
+    if db.songs.find_one({"id":song["id"]}):
+        return jsonify({"Message": f"song with id {song['id']} already present"}), 302
+    
+    result = db.songs.insert_one(song)
+    return parse_json(song), 201
+    
 # def create_song(): ...
 # def update_song(id): ...
 # def delete_song(id): ...
