@@ -117,6 +117,12 @@ def songs():
     return {"songs": parse_json(songs)}, 200
 
 
+@app.route("/song/<int:id>", methods=["GET"])
+def get_song_by_id(id):
+    song = db.songs.find_one({"id":id})
+    if song:
+        return parse_json(song), 200
+    return jsonify({"Message": f"song with id {id} not found"}), 404
 
 
 # def get_song_by_id(id): ...
