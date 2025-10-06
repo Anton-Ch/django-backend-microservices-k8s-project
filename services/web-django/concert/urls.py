@@ -4,7 +4,7 @@ from . import views
 urlpatterns = [
     re_path(r"^$", views.index, name="index"),
     path("songs/", views.songs, name="songs"),
-    path("", views.photos, name="photos"),
+    path("photos/", views.photos, name="photos"),
     path("", views.login_view, name="login"),
     path("", views.logout_view, name="logout"),
     path("", views.signup, name="signup"),
